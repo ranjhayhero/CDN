@@ -13,6 +13,14 @@ router.get('/files/:filename', async (req, res) => {
     try {
         const { filename } = req.params;
 
+        // Directly block any request with directory traversal characters
+        if (filename.includes('..') || filename.startsWith('/')) {
+            return res.status(403).json({ 
+                error: 'Access denied', 
+                message: 'Invalid file path' 
+            });
+        }
+
         // Define the CDN directory path
         const cdnDirectory = path.join(process.cwd(), 'cdn');
 
@@ -24,10 +32,7 @@ router.get('/files/:filename', async (req, res) => {
         const resolvedCdnPath = path.resolve(cdnDirectory);
         const resolvedFilePath = path.resolve(filePath);
 
-        // Check for directory traversal attempts
-        if (!resolvedFilePath.startsWith(resolvedCdnPath) || 
-            filename.includes('..') || 
-            filename.startsWith('/')) {
+        if (!resolvedFilePath.startsWith(resolvedCdnPath)) {
             return res.status(403).json({ 
                 error: 'Access denied', 
                 message: 'Invalid file path' 
