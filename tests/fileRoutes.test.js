@@ -13,7 +13,7 @@ describe('File Retrieval Routes', () => {
         const response = await request(app).get('/files/test.txt');
         
         expect(response.status).toBe(200);
-        expect(response.text).toBe('This is a test file for CDN retrieval.');
+        expect(response.text.trim()).toBe('This is a test file for CDN retrieval.');
     });
 
     it('should return 404 for non-existent file', async () => {

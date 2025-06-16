@@ -11,6 +11,6 @@
     },
     "devDependencies": {
         "supertest": "^6.3.3",
-        "vitest": "^1.2.2"
+        "vitest": "^1.6.1"
     }
 }
