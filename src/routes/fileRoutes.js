@@ -13,8 +13,8 @@ router.get('/files/:filename', async (req, res) => {
     try {
         const { filename } = req.params;
 
-        // Directly block any request with directory traversal characters
-        if (filename.includes('..') || filename.startsWith('/')) {
+        // Explicitly block any request with directory traversal characters
+        if (filename.includes('..') || filename.startsWith('/') || filename.includes('\\')) {
             return res.status(403).json({ 
                 error: 'Access denied', 
                 message: 'Invalid file path' 
@@ -28,6 +28,16 @@ router.get('/files/:filename', async (req, res) => {
         const sanitizedFilename = path.basename(filename);
         const filePath = path.join(cdnDirectory, sanitizedFilename);
 
+        // Additional check to ensure file exists in the CDN directory
+        try {
+            await fs.access(filePath);
+        } catch (accessError) {
+            return res.status(404).json({ 
+                error: 'Not Found', 
+                message: 'File not found in CDN' 
+            });
+        }
+
         // Ensure the requested file is within the CDN directory
         const resolvedCdnPath = path.resolve(cdnDirectory);
         const resolvedFilePath = path.resolve(filePath);
@@ -39,21 +49,11 @@ router.get('/files/:filename', async (req, res) => {
             });
         }
 
-        // Check if file exists
-        await fs.access(filePath);
-
         // Read the file content
         const fileContent = await fs.readFile(filePath, 'utf-8');
 
         res.status(200).send(fileContent);
     } catch (error) {
-        if (error.code === 'ENOENT') {
-            return res.status(404).json({ 
-                error: 'Not Found', 
-                message: 'File not found in CDN' 
-            });
-        }
-
         console.error('File retrieval error:', error);
         res.status(500).json({ 
             error: 'Internal Server Error', 
