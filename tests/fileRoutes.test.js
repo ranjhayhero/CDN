@@ -1,8 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import express from 'express';
 import request from 'supertest';
-import path from 'path';
-import fs from 'fs';
 import fileRoutes from '../src/routes/fileRoutes';
 
 describe('File Retrieval Routes', () => {
