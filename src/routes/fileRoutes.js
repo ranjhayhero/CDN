@@ -13,8 +13,11 @@ router.get('/files/:filename', async (req, res) => {
     try {
         const { filename } = req.params;
 
-        // Explicitly block any request with directory traversal characters
-        if (filename.includes('..') || filename.startsWith('/') || filename.includes('\\')) {
+        // Explicit prevention of directory traversal and malicious paths
+        const unsafePathChars = ['..', '/', '\\'];
+        const hasDangerousPath = unsafePathChars.some(char => filename.includes(char));
+        
+        if (hasDangerousPath) {
             return res.status(403).json({ 
                 error: 'Access denied', 
                 message: 'Invalid file path' 
@@ -24,19 +27,9 @@ router.get('/files/:filename', async (req, res) => {
         // Define the CDN directory path
         const cdnDirectory = path.join(process.cwd(), 'cdn');
 
-        // Prevent directory traversal by checking the path
+        // Sanitize filename
         const sanitizedFilename = path.basename(filename);
         const filePath = path.join(cdnDirectory, sanitizedFilename);
-
-        // Additional check to ensure file exists in the CDN directory
-        try {
-            await fs.access(filePath);
-        } catch (accessError) {
-            return res.status(404).json({ 
-                error: 'Not Found', 
-                message: 'File not found in CDN' 
-            });
-        }
 
         // Ensure the requested file is within the CDN directory
         const resolvedCdnPath = path.resolve(cdnDirectory);
@@ -49,11 +42,31 @@ router.get('/files/:filename', async (req, res) => {
             });
         }
 
+        // Check if file exists
+        await fs.access(filePath);
+
         // Read the file content
         const fileContent = await fs.readFile(filePath, 'utf-8');
 
         res.status(200).send(fileContent);
     } catch (error) {
+        if (error.code === 'ENOENT') {
+            // For traversal-like attempts, return 403
+            const { filename } = req.params;
+            if (filename.includes('..') || filename.startsWith('/')) {
+                return res.status(403).json({ 
+                    error: 'Access denied', 
+                    message: 'Invalid file path' 
+                });
+            }
+
+            // Otherwise, return 404
+            return res.status(404).json({ 
+                error: 'Not Found', 
+                message: 'File not found in CDN' 
+            });
+        }
+
         console.error('File retrieval error:', error);
         res.status(500).json({ 
             error: 'Internal Server Error', 
