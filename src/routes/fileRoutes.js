@@ -24,7 +24,10 @@ router.get('/files/:filename', async (req, res) => {
         const resolvedCdnPath = path.resolve(cdnDirectory);
         const resolvedFilePath = path.resolve(filePath);
 
-        if (!resolvedFilePath.startsWith(resolvedCdnPath)) {
+        // Check for directory traversal attempts
+        if (!resolvedFilePath.startsWith(resolvedCdnPath) || 
+            filename.includes('..') || 
+            filename.startsWith('/')) {
             return res.status(403).json({ 
                 error: 'Access denied', 
                 message: 'Invalid file path' 
