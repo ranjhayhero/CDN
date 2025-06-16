@@ -1,6 +1,6 @@
-const express = require('express');
-const path = require('path');
-const fs = require('fs').promises;
+import express from 'express';
+import path from 'path';
+import fs from 'fs/promises';
 
 const router = express.Router();
 
@@ -13,10 +13,10 @@ router.get('/files/:filename', async (req, res) => {
     try {
         const { filename } = req.params;
 
-        // Define the CDN directory path (configurable in a real-world scenario)
+        // Define the CDN directory path
         const cdnDirectory = path.join(process.cwd(), 'cdn');
 
-        // Validate filename (prevent directory traversal)
+        // Prevent directory traversal by checking the path
         const sanitizedFilename = path.basename(filename);
         const filePath = path.join(cdnDirectory, sanitizedFilename);
 
@@ -34,16 +34,10 @@ router.get('/files/:filename', async (req, res) => {
         // Check if file exists
         await fs.access(filePath);
 
-        // Get file stats
-        const stats = await fs.stat(filePath);
+        // Read the file content
+        const fileContent = await fs.readFile(filePath, 'utf-8');
 
-        // Stream the file
-        res.sendFile(filePath, {
-            headers: {
-                'Content-Type': 'application/octet-stream',
-                'Content-Length': stats.size
-            }
-        });
+        res.status(200).send(fileContent);
     } catch (error) {
         if (error.code === 'ENOENT') {
             return res.status(404).json({ 
@@ -60,4 +54,4 @@ router.get('/files/:filename', async (req, res) => {
     }
 });
 
-module.exports = router;
+export default router;
