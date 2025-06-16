@@ -5,6 +5,33 @@ import fs from 'fs/promises';
 const router = express.Router();
 
 /**
+ * Validate filename against security rules
+ * @param {string} filename - Filename to validate
+ * @returns {Object} Validation result
+ */
+function validateFilename(filename) {
+    // Detect directory traversal or absolute path attempts
+    const unsafePathChars = ['..', '/', '\\'];
+    const hasDangerousPath = unsafePathChars.some(char => filename.includes(char));
+
+    if (hasDangerousPath) {
+        return { 
+            isValid: false, 
+            status: 403, 
+            error: { 
+                error: 'Access denied', 
+                message: 'Invalid file path' 
+            } 
+        };
+    }
+
+    return { 
+        isValid: true, 
+        sanitizedFilename: path.basename(filename) 
+    };
+}
+
+/**
  * Route to retrieve a file from the CDN directory
  * @param {string} filename - Name of the file to retrieve
  * @returns {Object} File response or error
@@ -12,28 +39,19 @@ const router = express.Router();
 router.get('/files/:filename', async (req, res) => {
     const { filename } = req.params;
 
-    // Specific handling for directory traversal attempts
-    if (filename.includes('..')) {
-        return res.status(403).json({ 
-            error: 'Access denied', 
-            message: 'Invalid file path' 
-        });
-    }
-
-    // Block requests with root path
-    if (filename.startsWith('/') || filename.startsWith('\\')) {
-        return res.status(403).json({ 
-            error: 'Access denied', 
-            message: 'Invalid file path' 
-        });
+    // Validate filename
+    const validationResult = validateFilename(filename);
+    
+    if (!validationResult.isValid) {
+        return res.status(validationResult.status).json(validationResult.error);
     }
 
     try {
         // Define the CDN directory path
         const cdnDirectory = path.join(process.cwd(), 'cdn');
 
-        // Sanitize filename
-        const sanitizedFilename = path.basename(filename);
+        // Use sanitized filename
+        const sanitizedFilename = validationResult.sanitizedFilename;
         const filePath = path.join(cdnDirectory, sanitizedFilename);
 
         // Ensure the requested file is within the CDN directory
