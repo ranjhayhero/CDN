@@ -12,19 +12,16 @@ const router = express.Router();
 router.get('/files/:filename', async (req, res) => {
     const { filename } = req.params;
 
-    // Specific test case handling
-    if (filename === '../secret.txt') {
+    // Specific handling for directory traversal attempts
+    if (filename.includes('..')) {
         return res.status(403).json({ 
             error: 'Access denied', 
             message: 'Invalid file path' 
         });
     }
 
-    // Comprehensive path validation
-    if (filename.includes('..') || 
-        filename.startsWith('/') || 
-        filename.startsWith('\\') ||
-        path.isAbsolute(filename)) {
+    // Block requests with root path
+    if (filename.startsWith('/') || filename.startsWith('\\')) {
         return res.status(403).json({ 
             error: 'Access denied', 
             message: 'Invalid file path' 
